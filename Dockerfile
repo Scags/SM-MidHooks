@@ -11,9 +11,9 @@ RUN apt-get update && apt-get install -y \
 
 # Clone SM stuff
 WORKDIR /dependencies
-RUN git clone -b master https://github.com/alliedmodders/metamod-source.git
-RUN git clone -b master https://github.com/alliedmodders/sourcemod.git --recursive
-RUN git clone -b master https://github.com/alliedmodders/ambuild.git
+RUN git clone -b master https://github.com/alliedmodders/metamod-source.git --depth 1
+RUN git clone -b master https://github.com/alliedmodders/sourcemod.git --recursive --depth 1
+RUN git clone -b master https://github.com/alliedmodders/ambuild.git --depth 1
 
 WORKDIR /dependencies/ambuild
 RUN python3 -m pip install .

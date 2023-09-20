@@ -61,6 +61,7 @@ public:
 
 	bool Enable();
 	bool Disable();
+	bool Enabled() { return m_Enabled; }
 
 	IPluginFunction *Callback() { return m_Callback; }
 
@@ -111,6 +112,8 @@ struct MidHookRegisters
 	xmmword xmm5;
 	xmmword xmm6;
 	xmmword xmm7;
+
+	reg eflags;
 
 	// Must ALWAYS be last since esp is pushed first
 	// in the midhook trampoline
@@ -478,14 +481,10 @@ public:
 	// ._.
 	void movups_esp_xmm(const sp::FloatRegister reg)
 	{
-		ensureSpace();
-		*pos_++ = 0x0f;
-		ensureSpace();
-		*pos_++ = 0x11;
-		ensureSpace();
-		*pos_++ = 0x04 + reg.code * 0x8;
-		ensureSpace();
-		*pos_++ = 0x24;
+		writebyte(0x0f);
+		writebyte(0x11);
+		writebyte(0x04 + reg.code * 0x8);
+		writebyte(0x24);
 	}
 
 	// sub esp, 10h
@@ -499,14 +498,10 @@ public:
 	// .____.
 	void movups_xmm_esp(const sp::FloatRegister reg)
 	{
-		ensureSpace();
-		*pos_++ = 0x0f;
-		ensureSpace();
-		*pos_++ = 0x10;
-		ensureSpace();
-		*pos_++ = 0x04 + reg.code * 0x8;
-		ensureSpace();
-		*pos_++ = 0x24;
+		writebyte(0x0f);
+		writebyte(0x10);
+		writebyte(0x04 + reg.code * 0x8);
+		writebyte(0x24);
 	}
 
 	// movups xmm*, [esp]
@@ -519,7 +514,18 @@ public:
 
 	void writebyte(uint8_t b)
 	{
+		ensureSpace();
 		writeByte(b);
+	}
+
+	void pushfd()
+	{
+		writebyte(0x9c);
+	}
+
+	void popfd()
+	{
+		writebyte(0x9d);
 	}
 };
 

@@ -16,7 +16,7 @@ MidHook::MidHook(void *ptr, IPluginFunction *callback, bool enable)
 
 bool MidHook::Enable()
 {
-	if (m_Enabled)
+	if (Enabled())
 		return false;
 
 	// Create trampoline
@@ -29,15 +29,17 @@ bool MidHook::Enable()
 	{
 		MAssembler masm;
 
-		size_t start = masm.length();
-
 		// Push registers
 		// We push in reverse order of the HookRegisters structure so that
 		// it is properly set up since it will be used as a parameter
 
-		// esp is always first (last) so that the true stack is held
+		// esp is always pushed first (last in the struct) so that the true stack is held
 		// and can be manipulated
 		masm.push(sp::esp);
+
+		// Add any new registers here (in reverse order of their declaration)
+
+		masm.pushfd();
 		masm.pushmm(sp::xmm7);
 		masm.pushmm(sp::xmm6);
 		masm.pushmm(sp::xmm5);
@@ -53,8 +55,6 @@ bool MidHook::Enable()
 		masm.push(sp::edx);
 		masm.push(sp::ecx);
 		masm.push(sp::eax);
-
-		assert(masm.length() - start == sizeof(MidHookRegisters));
 
 		// Now that the registers are pushed/saved, we can work in the callback
 
@@ -85,6 +85,10 @@ bool MidHook::Enable()
 		masm.popmm(sp::xmm5);
 		masm.popmm(sp::xmm6);
 		masm.popmm(sp::xmm7);
+		masm.popfd();
+
+		// Add any new registers here
+
 		masm.pop(sp::esp);
 
 		// Jmp to trampoline
@@ -97,8 +101,9 @@ bool MidHook::Enable()
 	// Emplace the bridge
 	DoGatePatch((unsigned char *)m_Target, m_Bridge);
 
-	// Memset after because permissions are set in DoGatePatch
-	memset((unsigned char *)m_Target + OP_JMP_SIZE, 0x90, m_ByteLen - OP_JMP_SIZE);
+	// Memset nops after because permissions are set in DoGatePatch
+	if (m_ByteLen - OP_JMP_SIZE > 0)
+		memset((unsigned char *)m_Target + OP_JMP_SIZE, 0x90, m_ByteLen - OP_JMP_SIZE);
 
 	m_Enabled = true;
 	return true;
@@ -110,7 +115,7 @@ bool MidHook::Enable()
 // while we're disabled
 bool MidHook::Disable()
 {
-	if (!m_Enabled)
+	if (!Enabled())
 		return false;
 
 	copy_bytes((unsigned char *)m_Trampoline, (unsigned char *)m_Target, OP_JMP_SIZE);
