@@ -118,13 +118,14 @@ bool MidHook::Disable()
 	if (!Enabled())
 		return false;
 
-	copy_bytes((unsigned char *)m_Trampoline, (unsigned char *)m_Target, OP_JMP_SIZE);
+	copy_bytes((unsigned char *)m_Trampoline, (unsigned char *)m_Target, m_ByteLen);
 
 	smutils->GetScriptingEngine()->FreePageMemory(m_Trampoline);
 	smutils->GetScriptingEngine()->FreePageMemory(m_Bridge);
 	m_Trampoline = nullptr;
 	m_Bridge = nullptr;
 	m_ByteLen = 0;
+	m_Enabled = false;
 	return true;
 }
 
