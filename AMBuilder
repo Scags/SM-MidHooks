@@ -8,13 +8,13 @@ sourceFiles = [
   'ext/extension.cpp',
   'ext/natives.cpp',
   'ext/midhook.cpp',
-  os.path.join(Extension.sm_root, 'public/libudis86/decode.c'),
-  os.path.join(Extension.sm_root, 'public/libudis86/itab.c'),
-  os.path.join(Extension.sm_root, 'public/libudis86/syn-att.c'),
-  os.path.join(Extension.sm_root, 'public/libudis86/syn-intel.c'),
-  os.path.join(Extension.sm_root, 'public/libudis86/syn.c'),
-  os.path.join(Extension.sm_root, 'public/libudis86/udis86.c'),
-  os.path.join(Extension.sm_root, 'public/asm/asm.c'),
+  'ext/libudis86/decode.c',
+  'ext/libudis86/itab.c',
+  'ext/libudis86/syn-att.c',
+  'ext/libudis86/syn-intel.c',
+  'ext/libudis86/syn.c',
+  'ext/libudis86/udis86.c',
+  'ext/asm/asm.c',
 ]
 
 ###############

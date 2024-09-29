@@ -235,6 +235,10 @@ class ExtensionConfig(object):
       
       os.path.join(self.mms_root, 'core', 'sourcehook'),
     ]
+
+    compiler.includes += [
+      os.path.join(context.currentSourcePath, 'ext'),
+    ]
     return compiler
 
   def Library(self, context, name):

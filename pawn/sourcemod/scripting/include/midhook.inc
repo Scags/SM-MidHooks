@@ -147,6 +147,21 @@ methodmap MidHookRegisters < Handle
      * @error The reg param is invalid or unsupported or the len parameter is <= 0 or > 4.
     */
     public native void SetXmmWord(DHookRegister reg, const any[] array, int len=4);
+
+    /**
+     * Load the effective address of a register. This is equivalent to lea val, [reg+n]
+     * 
+     * @param reg           The register to Load the address from.
+     * @param offset        The offset from the address.
+     * 
+     * @return              The register value + the offset.
+     * 
+     * @error The reg param is invalid or unsupported.
+    */
+    public any LoadAddress(DHookRegister reg, int offset=0)
+    {
+        return this.Get(reg) + offset;
+    }
 }
 
 // Callback for use in a midfunc hook
@@ -182,6 +197,26 @@ methodmap MidHook < Handle
      * @return              True on success, false if the hook is already disabled.
     */
     public native bool Disable();
+
+    // Returns whether or not the MidHook is enabled.
+    property bool Enabled
+    {
+        public native get();
+    }
+
+    // The address where the midhook is, i.e. the start of the jmp instruction.
+    // This is the same as what was passed in the MidHook constructor.
+    property Address TargetAddress
+    {
+        public native get();
+    }
+
+    // The address the midhooks "returns" to, i.e. where the midhook jumps back.
+    // Note that this is only populated when the MidHook is enabled.
+    property Address ReturnAddress
+    {
+        public native get();
+    }
 }
 
 public Extension __ext_midhooks =
@@ -201,11 +236,14 @@ public Extension __ext_midhooks =
 };
 
 #if !defined REQUIRE_EXTENSIONS
-public void __ext_smmidhooks_SetNTVOptional()
+public void __ext_midhooks_SetNTVOptional()
 {
     MarkNativeAsOptional("MidHook.MidHook");
     MarkNativeAsOptional("MidHook.Enable");
     MarkNativeAsOptional("MidHook.Disable");
+    MarkNativeAsOptional("MidHook.Enabled.get");
+    MarkNativeAsOptional("MidHook.TargetAddress.get");
+    MarkNativeAsOptional("MidHook.ReturnAddress.get");
 
     MarkNativeAsOptional("MidHookRegisters.Get");
     MarkNativeAsOptional("MidHookRegisters.GetFloat");

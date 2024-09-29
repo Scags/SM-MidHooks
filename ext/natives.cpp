@@ -50,6 +50,48 @@ static cell_t Native_MidHook_Disable(IPluginContext *pContext, const cell_t *par
 	return (cell_t)hook->Disable();
 }
 
+static cell_t Native_MidHook_Enabled_Get(IPluginContext *pContext, const cell_t *params)
+{
+	Handle_t hndl = (Handle_t)params[1];
+	MidHook *hook;
+	HandleSecurity sec(pContext->GetIdentity(), myself->GetIdentity());
+	HandleError err = handlesys->ReadHandle(hndl, g_MidHookType, &sec, (void **)&hook);
+	if (err != HandleError_None)
+	{
+		return pContext->ThrowNativeError("Invalid Handle %x (error %d)", hndl, err);
+	}
+
+	return (cell_t)hook->Enabled();
+}
+
+static cell_t Native_MidHook_TargetAddress_Get(IPluginContext *pContext, const cell_t *params)
+{
+	Handle_t hndl = (Handle_t)params[1];
+	MidHook *hook;
+	HandleSecurity sec(pContext->GetIdentity(), myself->GetIdentity());
+	HandleError err = handlesys->ReadHandle(hndl, g_MidHookType, &sec, (void **)&hook);
+	if (err != HandleError_None)
+	{
+		return pContext->ThrowNativeError("Invalid Handle %x (error %d)", hndl, err);
+	}
+
+	return (cell_t)hook->Target();
+}
+
+static cell_t Native_MidHook_ReturnAddress_Get(IPluginContext *pContext, const cell_t *params)
+{
+	Handle_t hndl = (Handle_t)params[1];
+	MidHook *hook;
+	HandleSecurity sec(pContext->GetIdentity(), myself->GetIdentity());
+	HandleError err = handlesys->ReadHandle(hndl, g_MidHookType, &sec, (void **)&hook);
+	if (err != HandleError_None)
+	{
+		return pContext->ThrowNativeError("Invalid Handle %x (error %d)", hndl, err);
+	}
+
+	return (cell_t)hook->ReturnAddress();
+}
+
 static cell_t Native_MidHookRegisters_Get(IPluginContext *pContext, const cell_t *params)
 {
 	Handle_t hndl = (Handle_t)params[1];
@@ -214,6 +256,9 @@ sp_nativeinfo_t g_Natives[] = {
 	{"MidHook.MidHook", Native_MidHook},
 	{"MidHook.Enable", Native_MidHook_Enable},
 	{"MidHook.Disable", Native_MidHook_Disable},
+	{"MidHook.Enabled.get", Native_MidHook_Enabled_Get},
+	{"MidHook.TargetAddress.get", Native_MidHook_TargetAddress_Get},
+	{"MidHook.ReturnAddress.get", Native_MidHook_ReturnAddress_Get},
 
 	{"MidHookRegisters.Get", Native_MidHookRegisters_Get},
 	{"MidHookRegisters.GetFloat", Native_MidHookRegisters_Get},

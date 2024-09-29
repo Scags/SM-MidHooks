@@ -40,7 +40,7 @@
 /* Basic information exposed publicly */
 #define SMEXT_CONF_NAME			"MidHooks"
 #define SMEXT_CONF_DESCRIPTION	"Midfunc hooks exposed to SourcePawn"
-#define SMEXT_CONF_VERSION		"0.1.1.1"
+#define SMEXT_CONF_VERSION		"0.2.0.2"
 #define SMEXT_CONF_AUTHOR		"Scags"
 #define SMEXT_CONF_URL			"http://www.github.com/Scags"
 #define SMEXT_CONF_LOGTAG		"MIDHOOKS"

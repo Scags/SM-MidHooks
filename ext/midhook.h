@@ -7,8 +7,14 @@
 #endif
 
 #include "x86/assembler-x86.h"
+#include "jit_helpers.h"
+#include "CDetour/detourhelpers.h"
+#include "asm/asm.h"
+#include "libudis86/udis86.h"
 #include <array>
 #include <algorithm>
+#include <vector>
+#include <queue>
 
 // Copied from dhooks for use with MidHookRegisters natives
 // Easier this way
@@ -51,6 +57,148 @@ enum DHookRegister
 	DHookRegister_ST0
 };
 
+#if 0
+class MidJmp
+{
+public:
+	// Use a custom allocator so that the byte vector's memory is already in SM managed RWX
+	template<typename T = uint8_t>
+	class Allocator
+	{
+	public:
+		T *allocate(std::size_t n)
+		{
+			return (T *)smutils->GetScriptingEngine()->AllocatePageMemory(n);
+		}
+
+		void deallocate(T *p, std::size_t n)
+		{
+			smutils->GetScriptingEngine()->FreePageMemory((void *)p);
+		}
+	};
+
+	MidJmp(void *target, int requiredlen = OP_JMP_SIZE)
+		: m_Target((uint8_t *)target),
+		  m_RequiredLen(requiredlen)
+	{
+		// Try and keep a single allocation
+		// If there's more than one, then everything breaks because relative instructions
+		// might be relocated
+		m_Bytes.reserve(0x40);
+
+		ud_t ud_obj;
+		ud_init(&ud_obj);
+
+#if defined(_WIN64) || defined(__x86_64__)
+		ud_set_mode(&ud_obj, 64);
+#else
+		ud_set_mode(&ud_obj, 32);
+#endif
+		unsigned int byteLen = 0;
+		uint8_t *func = m_Target;
+		ud_set_input_buffer(&ud_obj, func, 20);
+
+		while (byteLen < m_RequiredLen && ud_disassemble(&ud_obj))
+		{
+			const uint8_t *insn = ud_insn_ptr(&ud_obj);
+			unsigned int insn_len = ud_insn_len(&ud_obj);
+
+			// m_Bytes size may differ from actual byte len in case a short jump
+			// needs to be expanded
+			byteLen += insn_len;
+
+			if (IsRelInsn(insn))
+			{
+				const struct ud_operand *operand = ud_insn_opr(&ud_obj, 0);
+				if (operand != nullptr)
+				{
+					if (operand->size == 32)
+					{
+						uint8_t addoffs = *insn == 0x0f ? 2 : 1;
+						for (uint8_t i = 0; i < addoffs; i++)
+						{
+							m_Bytes.push_back(insn[i]);
+						}
+
+						uint8_t *rvaoffs = func + addoffs;
+						*(int32_t *)&m_Bytes.data()[m_Bytes.size()] = rvaoffs + *(int32_t *)rvaoffs - &m_Bytes.data()[m_Bytes.size()];
+						m_Bytes.resize(m_Bytes.size() + sizeof(int32_t));
+					}
+					// Short jump, expandaband band
+					else
+					{
+						uint8_t addoffs;
+						if (*insn == 0xeb)
+						{
+							m_Bytes.push_back(0xe9);
+							addoffs = 1;
+						}
+						else
+						{
+							m_Bytes.push_back(0x0f);
+							m_Bytes.push_back(insn[1] + 0x10);
+							addoffs = 2;
+						}
+
+						uint8_t *rvaoffs = func + addoffs;
+						*(int32_t *)&m_Bytes.data()[m_Bytes.size()] = rvaoffs + *(int32_t *)rvaoffs - &m_Bytes.data()[m_Bytes.size()];
+						m_Bytes.resize(m_Bytes.size() + sizeof(int32_t));
+					}
+				}
+				else goto copybytes;
+			}
+			else
+			{
+			copybytes:
+				for (unsigned int i = 0; i < insn_len; i++)
+					m_Bytes.push_back(insn[i]);
+			}
+
+			for (unsigned int i = 0; i < insn_len; i++)
+				m_OriginalBytes.push_back(insn[i]);
+
+			func += insn_len;
+		}
+	}
+	MidJmp(const MidJmp &) = delete;
+	MidJmp(MidJmp &&) = delete;
+
+	~MidJmp()
+	{
+	}
+
+	static bool IsRelInsn(const uint8_t *insn)
+	{
+		// Short jump
+		if (*insn >= 0x70 && *insn <= 0x7f)
+			return true;
+
+		// LOOP and JCX do not have 32-bit equivalents beyond doing the instructions by hand and no thank you
+		// if (*insn >= 0xe0 && *insn <= 0xe3)
+		// 	return true;
+
+		// Call and rel jump
+		if (*insn == 0xe8 || *insn == 0xe9 || *insn == 0xeb)
+			return true;
+
+		// 2-insn jump
+		if (*insn == 0x0f)
+		{
+			if (insn[1] >= 0x80 && insn[1] <= 0x8f)
+				return true;
+		}
+		return false;
+	}
+
+private:
+	uint8_t *m_Target = {};
+	int m_RequiredLen = {};
+	int m_ByteSize = {};
+	std::vector<uint8_t, MidJmp::Allocator<uint8_t>> m_Bytes;
+	std::vector<uint8_t> m_OriginalBytes;
+};
+#endif
+
 struct MidHookRegisters;
 
 class MidHook
@@ -61,9 +209,11 @@ public:
 
 	bool Enable();
 	bool Disable();
-	bool Enabled() { return m_Enabled; }
 
+	bool Enabled() { return m_Enabled; }
 	IPluginFunction *Callback() { return m_Callback; }
+	void *Target() { return m_Target; }
+	void *ReturnAddress() { return Enabled() ? (void *)((unsigned char *)m_Target + m_ByteLen) : nullptr; }
 
 	static void Cleanup();
 	static void Cleanup(IPluginContext *);

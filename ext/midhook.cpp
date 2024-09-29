@@ -122,6 +122,9 @@ bool MidHook::Disable()
 
 	smutils->GetScriptingEngine()->FreePageMemory(m_Trampoline);
 	smutils->GetScriptingEngine()->FreePageMemory(m_Bridge);
+	m_Trampoline = nullptr;
+	m_Bridge = nullptr;
+	m_ByteLen = 0;
 	return true;
 }
 
